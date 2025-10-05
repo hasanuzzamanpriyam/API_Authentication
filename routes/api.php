@@ -5,8 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\Auth\AuthController;
-
-
+use App\Http\Controllers\ManageProfileController;
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
@@ -41,4 +40,8 @@ Route::middleware(['auth:admin', 'permission:manage-blogs'])->group(function () 
     Route::post('blogs', [BlogController::class, 'store'])->name('blogs.store');
     Route::post('blogs/{id}', [BlogController::class, 'update'])->name('blogs.update');
     Route::delete('blogs/{id}', [BlogController::class, 'destroy'])->name('blogs.delete');
+});
+
+Route::middleware(['auth:admin', 'role:super_admin'])->group(function () {
+    Route::post('manage-profile', [ManageProfileController::class, 'store']);
 });
