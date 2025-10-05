@@ -2,9 +2,12 @@
 
 namespace Database\Seeders;
 
+use App\Models\User;
+use App\Models\Admin;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 
 class PermissionSeeder extends Seeder
 {
@@ -13,48 +16,72 @@ class PermissionSeeder extends Seeder
      */
     public function run(): void
     {
+        // Reset cached roles and permissions
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
+        /*
+        |--------------------------------------------------------------------------
+        | Admin Permissions (guard: admin)
+        |--------------------------------------------------------------------------
+        */
         $adminPermissions = [
             'manage-users',
+            'manage-products',
             'manage-blogs',
-            'manage-settings',
+            'manage-payments',
         ];
 
         foreach ($adminPermissions as $perm) {
-            DB::table('permissions')->insert([
+            Permission::firstOrCreate([
                 'name' => $perm,
                 'guard_name' => 'admin',
-                'created_at' => now(),
-                'updated_at' => now(),
             ]);
-
         }
 
-
+        /*
+        |--------------------------------------------------------------------------
+        | User Permissions (guard: api)
+        |--------------------------------------------------------------------------
+        */
         $userPermissions = [
-            ['name' => 'product.create', 'display_name' => 'Create Product', 'description' => 'Can create products'],
-            ['name' => 'product.edit', 'display_name' => 'Edit Product', 'description' => 'Can edit products'],
-            ['name' => 'product.delete', 'display_name' => 'Delete Product', 'description' => 'Can delete products'],
-            ['name' => 'product.view', 'display_name' => 'View Product', 'description' => 'Can view products'],
-
-            ['name' => 'payment.create', 'display_name' => 'Create Payment', 'description' => 'Can create payments'],
-            ['name' => 'payment.edit', 'display_name' => 'Edit Payment', 'description' => 'Can edit payments'],
-            ['name' => 'payment.delete', 'display_name' => 'Delete Payment', 'description' => 'Can delete payments'],
-            ['name' => 'payment.view', 'display_name' => 'View Payment', 'description' => 'Can view payments'],
-
-            ['name' => 'blog.create', 'display_name' => 'Create Blog', 'description' => 'Can create blogs'],
-            ['name' => 'blog.edit', 'display_name' => 'Edit Blog', 'description' => 'Can edit blogs'],
-            ['name' => 'blog.delete', 'display_name' => 'Delete Blog', 'description' => 'Can delete blogs'],
-            ['name' => 'blog.view', 'display_name' => 'View Blog', 'description' => 'Can view blogs'],
+            'payment-view',
+            'blog-view',
+            'product-view',
         ];
 
         foreach ($userPermissions as $permission) {
-            DB::table('permissions')->updateOrInsert(
-                ['name' => $permission['name']],
-                $permission
-            );
+            Permission::firstOrCreate([
+                'name' => $permission,
+                'guard_name' => 'api',
+            ]);
         }
 
-        $this->command->info('Permissions seeded successfully.');
+        /*
+        |--------------------------------------------------------------------------
+        | Create Roles & Assign Permissions
+        |--------------------------------------------------------------------------
+        */
+        $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'admin']);
+        $userRole  = Role::firstOrCreate(['name' => 'user', 'guard_name' => 'api']);
+
+        $adminRole->syncPermissions($adminPermissions);
+        $userRole->syncPermissions($userPermissions);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Assign Roles to Default Accounts (if they exist)
+        |--------------------------------------------------------------------------
+        */
+        $admin = Admin::find(1);
+        if ($admin) {
+            $admin->assignRole('admin');
+        }
+
+        $user = User::find(1);
+        if ($user) {
+            $user->assignRole('user');
+        }
+
+        $this->command->info('✅ Permissions and roles seeded successfully.');
     }
 }
