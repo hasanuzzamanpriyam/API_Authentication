@@ -24,6 +24,7 @@ return new class extends Migration
             $table->boolean('is_otp_verified')->default(false);
             $table->timestamp('otp_expires_at')->nullable();
             $table->enum('status', ['active', 'inactive','pending'])->default('active');
+
             $table->timestamps();
             $table->softDeletes();
         });

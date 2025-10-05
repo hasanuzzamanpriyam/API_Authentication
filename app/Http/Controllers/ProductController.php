@@ -11,80 +11,80 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class ProductController extends Controller
 {
-public function index(Request $request)
-{
-    try {
-        // Base query
-        $qry = Product::query();
+    public function index(Request $request)
+    {
+        try {
+            // Base query - only active products
+            $qry = Product::where('status', 'active');
 
-        // ✅ Search by name, brand, or category
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $qry->where(function ($q) use ($search) {
-                $q->where('name', 'LIKE', "%{$search}%")
-                  ->orWhere('brand', 'LIKE', "%{$search}%")
-                  ->orWhere('category', 'LIKE', "%{$search}%");
+            // Search by name, brand, or category
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $qry->where(function ($q) use ($search) {
+                    $q->where('name', 'LIKE', "%{$search}%")
+                        ->orWhere('brand', 'LIKE', "%{$search}%")
+                        ->orWhere('category', 'LIKE', "%{$search}%");
+                });
+            }
+
+            // Order by created_at
+            if ($request->filled('order') && strtolower($request->order) === 'asc') {
+                $qry->orderBy('created_at', 'asc');
+            } else {
+                $qry->orderBy('created_at', 'desc');
+            }
+
+            // Determine per page
+            $perPage = $request->page === '0' ? $qry->count() : $request->input('per_page', 10);
+
+            // Paginate
+            $data = $qry->paginate($perPage);
+
+            // Map products with full image URL
+            $products = $data->getCollection()->map(function ($product) {
+                return [
+                    'id'             => $product->id,
+                    'name'           => $product->name,
+                    'price'          => $product->price,
+                    'image'          => $product->image ? asset('storage/' . $product->image) : null,
+                    'category'       => $product->category,
+                    'brand'          => $product->brand,
+                    'rating'         => $product->rating,
+                    'count_in_stock' => $product->count_in_stock,
+                    'num_reviews'    => $product->num_reviews,
+                    'status'         => $product->status,
+                ];
             });
+
+            // Return paginated response
+            return response()->json([
+                'pagination' => [
+                    'limit_page'         => $perPage,
+                    'total_count'        => $data->total(),
+                    'total_page'         => $data->lastPage(),
+                    'current_page'       => $data->currentPage(),
+                    'current_page_count' => $data->count(),
+                    'next_page'          => $data->hasMorePages() ? $data->currentPage() + 1 : null,
+                    'previous_page'      => $data->onFirstPage() ? null : $data->currentPage() - 1,
+                ],
+                'message' => 'Products retrieved successfully',
+                'data'    => $products, // ✅ Use the mapped collection
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Something went wrong: ' . $e->getMessage(),
+            ], 500);
         }
-
-        // ✅ Order by created_at (default desc)
-        if ($request->filled('order') && strtolower($request->order) === 'asc') {
-            $qry->orderBy('created_at', 'asc');
-        } else {
-            $qry->orderBy('created_at', 'desc');
-        }
-
-        // ✅ Determine per page
-        $perPage = $request->page === '0' ? Product::count() : $request->input('per_page', 10);
-
-        // ✅ Paginate results
-        $data = $qry->paginate($perPage);
-
-        // ✅ Map products with full image URL
-        $products = $data->getCollection()->map(function ($product) {
-            return [
-                'id'             => $product->id,
-                'name'           => $product->name,
-                'price'          => $product->price,
-                'image'          => $product->image ? asset('storage/' . $product->image) : null,
-                'category'       => $product->category,
-                'brand'          => $product->brand,
-                'rating'         => $product->rating,
-                'count_in_stock' => $product->count_in_stock,
-                'num_reviews'    => $product->num_reviews,
-                'status'         => $product->status,
-                'created_at'     => $product->created_at,
-                'updated_at'     => $product->updated_at,
-            ];
-        });
-
-        // ✅ Return paginated response
-        return response()->json([
-            'pagination' => [
-                'limit_page'         => $perPage,
-                'total_count'        => $data->total(),
-                'total_page'         => $data->lastPage(),
-                'current_page'       => $data->currentPage(),
-                'current_page_count' => $data->count(),
-                'next_page'          => $data->hasMorePages() ? $data->currentPage() + 1 : null,
-                'previous_page'      => $data->onFirstPage() ? null : $data->currentPage() - 1,
-            ],
-            'message' => 'Products retrieved successfully',
-            'data'    => $products,
-        ], 200);
-
-    } catch (Exception $e) {
-        return response()->json([
-            'message' => 'Something went wrong: ' . $e->getMessage(),
-        ], 500);
     }
-}
+
+
 
 
 
     public function store(Request $request)
     {
         try {
+
             // ✅ Validate input
             $validated = $request->validate([
                 'name'           => 'required|string|max:255',
@@ -136,7 +136,6 @@ public function index(Request $request)
             return response()->json([
                 'success' => false,
                 'message' => 'Something went wrong.',
-                'error'   => $e->getMessage(),
             ], 500);
         }
     }

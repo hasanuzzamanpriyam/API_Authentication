@@ -13,7 +13,14 @@ return new class extends Migration
     {
         Schema::create('blogs', function (Blueprint $table) {
             $table->id();
+            $table->string('title');
+            $table->longText('description')->nullable();
+            $table->string('image')->nullable();
+            $table->string('publisher')->nullable();
+            $table->date('date')->nullable();
+            $table->enum('status', ['active', 'inactive', 'pending'])->default('active');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 
