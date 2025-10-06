@@ -109,7 +109,19 @@ class AuthController extends Controller
             foreach ($guards as $guard) {
                 if ($token = Auth::guard($guard)->attempt($credentials)) {
                     $user = Auth::guard($guard)->user();
-                    $type = $guard === 'api' ? 'user' : $guard;
+
+                    // --- START OF FIX ---
+                    if ($guard === 'api') {
+                        // Regular API user
+                        $type = 'user';
+                    } else {
+                        // Admin guard users (super_admin, manager, cashier, etc.)
+                        // Retrieve the specific role name from the Spatie package
+                        $roleName = $user->getRoleNames()->first();
+                        $type = $roleName ?? $guard; // Use the specific role name, fallback to 'admin'
+                    }
+                    // --- END OF FIX ---
+
 
                     // For regular users, check if their account is verified
                     if ($type === 'user' && ($user->status === 'pending' || !$user->is_otp_verified)) {
@@ -120,7 +132,7 @@ class AuthController extends Controller
                     return response()->json([
                         'message' => 'Successfully logged in',
                         'data' => [
-                            "type" => $type,
+                            "type" => $type, // Now uses the specific role name (manager, cashier, etc.)
                             "name" => $user->name,
                             "email" => $user->email,
                         ],

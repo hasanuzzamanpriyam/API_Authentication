@@ -58,30 +58,52 @@ class PermissionSeeder extends Seeder
 
         /*
         |--------------------------------------------------------------------------
-        | Create Roles & Assign Permissions
+        | Create Roles
         |--------------------------------------------------------------------------
         */
+        $superAdminRole = Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'admin']);
         $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'admin']);
-        $userRole  = Role::firstOrCreate(['name' => 'user', 'guard_name' => 'api']);
+        $managerRole = Role::firstOrCreate(['name' => 'manager', 'guard_name' => 'admin']);
+        $cashierRole = Role::firstOrCreate(['name' => 'cashier', 'guard_name' => 'admin']);
+        $userRole = Role::firstOrCreate(['name' => 'user', 'guard_name' => 'api']);
 
-        $adminRole->syncPermissions($adminPermissions);
-        $userRole->syncPermissions($userPermissions);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Assign Permissions to Roles
+        |--------------------------------------------------------------------------
+        */
+        // Super admin gets all 'admin' guard permissions
+        $superAdminRole->syncPermissions(Permission::where('guard_name', 'admin')->get());
+
+        // Admin gets specific permissions
+        $adminRole->syncPermissions(['manage-products', 'manage-blogs']);
+
+        // Manager gets a subset of permissions
+        $managerRole->syncPermissions(['manage-products']);
+
+        // Cashier gets specific permissions
+        $cashierRole->syncPermissions(['manage-payments']);
+
+        // Regular user gets specific permissions for 'api' guard
+        $userRole->syncPermissions(['payment-view', 'blog-view', 'product-view']);
+
 
         /*
         |--------------------------------------------------------------------------
         | Assign Roles to Default Accounts (if they exist)
         |--------------------------------------------------------------------------
         */
-        $admin = Admin::find(1);
-        if ($admin) {
-            $admin->assignRole('admin');
+        // Find the first admin user and assign the super_admin role
+        $superAdmin = Admin::find(1);
+        if ($superAdmin) {
+            $superAdmin->assignRole('super_admin');
         }
 
-        $user = User::find(1);
-        if ($user) {
-            $user->assignRole('user');
+        // Find the first regular user and assign the user role
+        $regularUser = User::find(1);
+        if ($regularUser) {
+            $regularUser->assignRole('user');
         }
-
-        $this->command->info('✅ Permissions and roles seeded successfully.');
     }
 }
