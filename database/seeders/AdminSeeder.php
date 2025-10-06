@@ -19,7 +19,7 @@ class AdminSeeder extends Seeder
             [
                 'id' => 1,
                 'name' => 'Super Admin',
-                'email' => 'admin@admin.com',
+                'email' => 'superadmin@superadmin.com',
                 'password' => Hash::make('12345678'),
                 'image' => null,
                 'status' => 'active',
