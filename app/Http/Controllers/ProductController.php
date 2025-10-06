@@ -70,7 +70,7 @@ class ProductController extends Controller
                 'message' => 'Products retrieved successfully',
                 'data'    => $products, // ✅ Use the mapped collection
             ], 200);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'message' => 'Something went wrong: ' . $e->getMessage(),
             ], 500);
@@ -196,7 +196,7 @@ class ProductController extends Controller
                 'success' => false,
                 'message' => 'Product not found.',
             ], 404);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Something went wrong.',
